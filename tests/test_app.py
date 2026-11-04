@@ -139,6 +139,13 @@ def test_usage_guide_and_attribution_available_in_empty_state():
     assert 'Download from IMD' in content
     assert 'IDW' in content
     assert 'NetCDF' in content
+    assert 'Pai' in content and '2014' in content
+    assert 'Srivastava' in content and '10.1002/asl.232' in content
+    citations=next(item for item in app.expander if item.label=='Dataset citations (papers and presentations)')
+    citation_text='\n'.join(item.value for item in citations.markdown)
+    assert 'ref_paper_MAUSAM.pdf' in citation_text
+    assert 'Research%20paper.pdf' in citation_text
+    assert '10.1002/asl.232' in citation_text
     rainfall_url='https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html'
     assert rainfall_url in content
     assert any(rainfall_url in item.value for item in app.sidebar.markdown)

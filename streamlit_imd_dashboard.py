@@ -347,6 +347,8 @@ def run_app():
     st.divider()
     st.markdown('**Data credit:** India Meteorological Department (IMD), Ministry of Earth Sciences, Government of India, for the gridded rainfall and temperature datasets.')
     st.markdown('[Rainfall · 0.25° NetCDF](https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html) · [Maximum temperature · 1° binary](https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html) · [Minimum temperature · 1° binary](https://www.imdpune.gov.in/cmpg/Griddata/Min_1_Bin.html)')
+    with st.expander('Dataset citations (papers and presentations)'):
+        st.markdown((Path(__file__).parent/'docs'/'CITATIONS.md').read_text(encoding='utf-8'))
     st.markdown('Webapp Prepared by Dr Sachchidanand Singh, Assistant Professor, IIT Mandi')
 
 
