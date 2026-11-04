@@ -336,5 +336,15 @@ def main():
             st.write('No missing values are filled with zero. Annual rainfall is the sum of valid daily amounts; temperatures are the mean of valid daily values. Coverage is valid grid-days / expected grid-days. Complete requires 100% coverage at every selected grid center. Hydrological years are labeled by their June start year. Data sources must have Gregorian daily time coordinates and identical rectilinear grids.')
 
 
+def run_app():
+    dashboard,guide=st.tabs(['Dashboard','How to use this app'])
+    with dashboard:
+        main()
+    with guide:
+        st.markdown((Path(__file__).parent/'docs'/'HOW_TO_USE.md').read_text(encoding='utf-8'))
+    st.divider()
+    st.markdown('Webapp Prepared by Dr Sachchidanand Singh, Assistant Professor, IIT Mandi')
+
+
 if __name__ == '__main__':
-    main()
+    run_app()

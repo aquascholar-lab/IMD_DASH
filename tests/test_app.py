@@ -10,7 +10,7 @@ def test_demo_all_products_and_year_selection(product):
     assert not app.exception
     app.sidebar.selectbox(key='product').select(product).run()
     assert not app.exception
-    assert len(app.tabs) == 5
+    assert {'Overview','Seasons & months','Spatial explorer','Trends','Data & exports'} <= {tab.label for tab in app.tabs}
     assert len(app.metric) >= 4
     app.sidebar.select_slider(key='years').set_value((2024,2024)).run()
     assert not app.exception
@@ -128,3 +128,20 @@ def test_rectangle_draft_edits_reuse_applied_analysis(monkeypatch):
     drawn['all_drawings'][0]['geometry']['coordinates']=[[[75,10],[75.5,10],[75.5,10.5],[75,10.5],[75,10]]]
     app.run()
     assert len(calls)==before
+
+
+def test_usage_guide_and_attribution_available_in_empty_state():
+    app=AppTest.from_file(APP,default_timeout=30).run()
+    assert 'How to use this app' in [tab.label for tab in app.tabs]
+    guide=next(tab for tab in app.tabs if tab.label=='How to use this app')
+    content='\n'.join(item.value for item in guide.markdown)
+    assert 'Apply rectangle' in content
+    assert 'Download from IMD' in content
+    assert 'IDW' in content
+    assert 'NetCDF' in content
+    attribution='Webapp Prepared by Dr Sachchidanand Singh, Assistant Professor, IIT Mandi'
+    assert app.markdown[-1].value==attribution
+    app.sidebar.radio(key='source').set_value('Upload files').run()
+    assert not app.exception
+    assert app.markdown[-1].value==attribution
+    assert 'How to use this app' in [tab.label for tab in app.tabs]

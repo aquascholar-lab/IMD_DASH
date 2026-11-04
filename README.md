@@ -186,3 +186,12 @@ Kelvin conversion, missing values, clipping and polygon holes, annual grouping,
 binary length/layout, grid mismatch, overlapping dates, trend year spacing,
 download form discovery/validation/caching, IDW exact values and polygon masking,
 and Streamlit reruns/exports/built-in temperature batches for all three products.
+
+## In-app documentation
+
+Open **How to use this app** beside the Dashboard tab for the complete user guide.
+It covers built-in retrieval, uploads, rectangle selection, yearly grouping,
+coverage, charts, IDW, trends, exports, and troubleshooting. Dashboard controls
+remain mounted when reading the guide, preserving your current settings.
+
+Webapp Prepared by Dr Sachchidanand Singh, Assistant Professor, IIT Mandi
