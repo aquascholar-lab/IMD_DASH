@@ -42,3 +42,10 @@ def test_export_buttons_prepare_files_without_resetting_results():
     assert geo['type'] == 'FeatureCollection'
     assert len(geo['features']) == 63
     assert 'analysis' in app.session_state
+
+
+def test_official_tmax_binary_source_is_shown_for_temperature():
+    app = AppTest.from_file(APP,default_timeout=30).run()
+    app.sidebar.selectbox(key='product').select('Maximum temperature').run()
+    assert not app.exception
+    assert any('https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html' in item.value for item in app.sidebar.markdown)

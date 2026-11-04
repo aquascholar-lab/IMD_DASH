@@ -63,6 +63,15 @@ Temperature data must be uploaded; no unverified live temperature API is assumed
 
 ### IMD annual binary grids
 
+Official source supplied for maximum temperature (Tmax):
+[IMD 1° maximum-temperature binary data](https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html).
+The app links this page when Maximum temperature is selected. Download the annual
+file there, choose **Upload files**, and set **Binary file year** and byte order
+in **NetCDF / binary settings**. This Tmax link must not be used as a Tmin source.
+The page is an HTML landing page, not a NetCDF dataset URL. Its live download form
+could not be inspected here because access to imdpune.gov.in returns a network
+policy 403; no temperature request endpoint or form parameters are guessed.
+
 Upload **one annual `.grd`/`.bin` file at a time** and explicitly set its year and
 byte order. Binary files contain no time metadata, so their dates cannot be inferred
 reliably from bytes. The supported layout is raw float32, ordered day → latitude →

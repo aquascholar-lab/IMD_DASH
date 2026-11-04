@@ -83,6 +83,9 @@ def main():
         label = st.selectbox('Climate variable',[v['label'] for v in PRODUCTS.values()],key='product')
         product = next(k for k,v in PRODUCTS.items() if v['label']==label)
         meta = PRODUCTS[product]
+        if product == 'tmax':
+            st.markdown('[IMD maximum temperature · 1° binary source](https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html)')
+            st.caption('Download an annual binary file from IMD, choose Upload files, then set its year and byte order in NetCDF / binary settings. This source is for Tmax.')
         source = st.radio('Data source',['Demo · synthetic','Upload files','Download IMD rainfall'],key='source')
         st.divider()
         st.subheader('Study region')
