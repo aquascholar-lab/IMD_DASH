@@ -13,6 +13,7 @@ import streamlit as st
 from imd_data import (PRODUCTS, combine_arrays, demo_dataset, download_rainfall, download_temperature,
                       read_binary, read_netcdf, read_region, select_region, summarize, trend_table)
 from imd_sources import TEMPERATURE_PAGES
+from map_region import rectangle_selector
 from imd_charts import annual_chart, daily_chart, monthly_heatmap, seasonal_chart, spatial_chart
 
 st.set_page_config(page_title='IMD Climate Atlas',page_icon='🌦️',layout='wide',initial_sidebar_state='expanded')
@@ -98,7 +99,12 @@ def main():
         source = st.radio('Data source',['Demo · synthetic','Upload files','Download from IMD'],key='source')
         st.divider()
         st.subheader('Study region')
-        region_mode = st.radio('Region method',['Bounding box','Upload polygon'],key='region_method',horizontal=True)
+        region_mode = st.radio('Region method',['Bounding box','Draw rectangle','Upload polygon'],key='region_method')
+        previous_region_mode=st.session_state.get('previous_region_method')
+        if region_mode=='Draw rectangle' and previous_region_mode!=region_mode:
+            st.session_state['rectangle_draft']=st.session_state.get('rectangle_applied')
+            st.session_state['rectangle_epoch']=st.session_state.get('rectangle_epoch',0)+1
+        st.session_state['previous_region_method']=region_mode
         geometry = None
         region_name = 'Kerala bounds'
         if region_mode == 'Upload polygon':
@@ -114,7 +120,7 @@ def main():
             except Exception as exc:
                 st.error(f'Cannot read region: {exc}')
                 return
-        else:
+        elif region_mode == 'Bounding box':
             left,right = st.columns(2)
             west = left.number_input('West longitude',-180.,180.,74.5,step=.25)
             east = right.number_input('East longitude',-180.,180.,77.5,step=.25)
@@ -123,10 +129,18 @@ def main():
             bounds = (west,south,east,north)
             if bounds != (74.5,8.5,77.5,12.5):
                 region_name = 'Custom bounds'
-        if not (bounds[0]<bounds[2] and bounds[1]<bounds[3]):
+        else:
+            bounds=None
+            region_name='Drawn rectangle'
+        if bounds is not None and not (bounds[0]<bounds[2] and bounds[1]<bounds[3]):
             st.error('Use west < east and south < north.')
             return
         st.caption('Grid centers on the polygon boundary are included; holes are excluded.')
+
+    if region_mode=='Draw rectangle':
+        bounds=rectangle_selector()
+        if bounds is None:
+            return
 
     try:
         if source == 'Demo · synthetic':
@@ -212,9 +226,16 @@ def main():
             basis = st.selectbox('Annual grouping',['Calendar year','June–May hydrological year'],key='year_basis')
             window = st.selectbox('Rolling mean (days)',[7,14,30],key='rolling')
         selected = data.where((data.time.dt.year>=start_year)&(data.time.dt.year<=end_year),drop=True)
-        with st.spinner('Calculating regional statistics…'):
-            points = select_region(selected,bounds,geometry)
-            result = summarize(points,product,hydro=basis!='Calendar year')
+        analysis_token=repr((source_id,start_year,end_year,tuple(bounds),basis,geometry.wkb_hex if geometry is not None else None))
+        cached=st.session_state.get('last_analysis')
+        if cached and cached[0]==analysis_token:
+            result=cached[1]
+            points=result['points']
+        else:
+            with st.spinner('Calculating regional statistics…'):
+                points = select_region(selected,bounds,geometry)
+                result = summarize(points,product,hydro=basis!='Calendar year')
+            st.session_state['last_analysis']=(analysis_token,result)
         st.session_state['analysis'] = result
     except Exception as exc:
         st.error(f'Data could not be analyzed: {exc}')

@@ -76,3 +76,55 @@ def test_builtin_temperature_download_and_product_state(tmp_path,monkeypatch,pro
     other='Minimum temperature' if product=='Maximum temperature' else 'Maximum temperature'
     app.sidebar.selectbox(key='product').select(other).run()
     assert 'analysis' not in app.session_state
+
+
+def test_draw_rectangle_apply_edit_clear_and_analysis_bounds(monkeypatch):
+    current={'all_drawings':None}
+    monkeypatch.setattr('map_region.st_folium',lambda *args,**kwargs:current)
+    app=AppTest.from_file(APP,default_timeout=30).run()
+    app.sidebar.radio(key='region_method').set_value('Draw rectangle').run()
+    assert not app.exception
+    assert 'analysis' not in app.session_state
+    assert app.button(key='apply_rectangle').disabled
+    def rectangle(w,s,e,n):
+        return {'type':'Feature','geometry':{'type':'Polygon','coordinates':[[[w,s],[e,s],[e,n],[w,n],[w,s]]]},'properties':{}}
+    current['all_drawings']=[rectangle(75,10,76,11)]
+    app.run()
+    assert 'analysis' not in app.session_state
+    app.button(key='apply_rectangle').click().run()
+    assert not app.exception
+    assert app.session_state['rectangle_applied']==(75,10,76,11)
+    assert app.button(key='apply_rectangle').disabled
+    assert app.session_state['analysis']['points'].sizes['point']==9
+    # An edit remains a draft until explicitly applied.
+    current['all_drawings']=[rectangle(75,10,75.5,10.5)]
+    app.run()
+    assert app.session_state['analysis']['points'].sizes['point']==9
+    app.button(key='apply_rectangle').click().run()
+    assert app.session_state['analysis']['points'].sizes['point']==4
+    # The selection survives product changes.
+    app.sidebar.selectbox(key='product').select('Minimum temperature').run()
+    assert app.session_state['analysis']['points'].sizes['point']==4
+    current['all_drawings']=None
+    app.button(key='clear_rectangle').click().run()
+    assert 'analysis' not in app.session_state
+    assert 'rectangle_applied' not in app.session_state
+
+
+def test_rectangle_draft_edits_reuse_applied_analysis(monkeypatch):
+    import imd_data
+    original=imd_data.summarize
+    calls=[]
+    def summarize(*args,**kwargs):
+        calls.append(1)
+        return original(*args,**kwargs)
+    monkeypatch.setattr('imd_data.summarize',summarize)
+    drawn={'all_drawings':[{'type':'Feature','geometry':{'type':'Polygon','coordinates':[[[75,10],[76,10],[76,11],[75,11],[75,10]]]},'properties':{}}]}
+    monkeypatch.setattr('map_region.st_folium',lambda *args,**kwargs:drawn)
+    app=AppTest.from_file(APP,default_timeout=30).run()
+    app.sidebar.radio(key='region_method').set_value('Draw rectangle').run()
+    app.button(key='apply_rectangle').click().run()
+    before=len(calls)
+    drawn['all_drawings'][0]['geometry']['coordinates']=[[[75,10],[75.5,10],[75.5,10.5],[75,10.5],[75,10]]]
+    app.run()
+    assert len(calls)==before

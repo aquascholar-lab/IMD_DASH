@@ -22,7 +22,7 @@ The default view is **synthetic demonstration data**, labeled as such. Switch to
 ## Workflow
 
 1. Select Rainfall, Maximum temperature or Minimum temperature.
-2. Select a bounding box or upload a polygon (GeoJSON, KML, or a zipped shapefile
+2. Enter a bounding box, draw a rectangle on the map, or upload a polygon (GeoJSON, KML, or a zipped shapefile
    including its .shp, .shx, .dbf, and .prj). The default is Kerala's bounding box,
    **not** the Kerala administrative boundary. Upload a boundary for exact clipping.
 3. Upload one or more daily NetCDF files. Dates determine the available years;
@@ -54,6 +54,26 @@ years, invalid responses and caching were verified with offline fixtures. If IMD
 changes to a JavaScript-only flow or captcha, the app reports the unsupported page
 instead of saving an HTML error as data. Binary byte order defaults to little
 endian and can be changed in the download controls based on source documentation.
+
+## Draw a rectangle on the map
+
+1. In the sidebar, set **Region method → Draw rectangle**.
+2. Pan/zoom the map, click the rectangle tool, and drag across the study area.
+3. Click **Apply rectangle**. All products, tables, IDW maps and exports now use
+   that area's bounds. The latest rectangle replaces the previous drawing.
+4. To resize/move the selection, click the map's edit tool, adjust the handles,
+   click **Save** in the map toolbar, and then **Apply rectangle**.
+5. **Clear selection** removes the applied area and analysis until a new rectangle
+   is applied. Deleting an unsaved drawing does not remove an already applied area.
+
+The applied rectangle persists across year, product, chart and source changes.
+Draft edits do not change the active analysis; unchanged analysis is reused across
+map reruns. Existing manual bounds and polygon uploads remain available. Rectangle
+coordinates use longitude/latitude; antimeridian-crossing regions are rejected.
+Map controls use Leaflet/Leaflet Draw from jsDelivr; the OpenStreetMap basemap needs
+browser internet access. If tiles are unavailable, drawing still yields coordinates
+once the map controls have loaded. A region must contain at least one source grid
+center to be analyzed.
 
 ## Supported data
 
