@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
-from datetime import date 
+from datetime import date
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from imd_data import (PRODUCTS, combine_arrays, demo_dataset, download_rainfall,
+from imd_data import (PRODUCTS, combine_arrays, demo_dataset, download_rainfall, download_temperature,
                       read_binary, read_netcdf, read_region, select_region, summarize, trend_table)
+from imd_sources import TEMPERATURE_PAGES
 from imd_charts import annual_chart, daily_chart, monthly_heatmap, seasonal_chart, spatial_chart
 
 st.set_page_config(page_title='IMD Climate Atlas',page_icon='🌦️',layout='wide',initial_sidebar_state='expanded')
@@ -55,8 +56,16 @@ def load_uploads(files,product,variable,units,binary_year,byte_order,bounds):
 
 
 @st.cache_data(show_spinner=False,max_entries=8)
-def load_downloads(paths,bounds):
-    return combine_arrays([read_netcdf(path,'rainfall',bounds=bounds) for path in paths])
+def load_downloads(paths,bounds,product='rainfall',byte_order='<'):
+    if product == 'rainfall':
+        return combine_arrays([read_netcdf(path,product,bounds=bounds) for path in paths])
+    arrays=[]
+    west,south,east,north=bounds
+    for path in paths:
+        year=int(Path(path).stem.rsplit('_',1)[1])
+        a=read_binary(Path(path).read_bytes(),product,year,byte_order)
+        arrays.append(a.sel(latitude=slice(south,north),longitude=slice(west,east)))
+    return combine_arrays(arrays)
 
 
 @st.cache_data(show_spinner=False,max_entries=3)
@@ -83,10 +92,10 @@ def main():
         label = st.selectbox('Climate variable',[v['label'] for v in PRODUCTS.values()],key='product')
         product = next(k for k,v in PRODUCTS.items() if v['label']==label)
         meta = PRODUCTS[product]
-        if product == 'tmax':
-            st.markdown('[IMD maximum temperature · 1° binary source](https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html)')
-            st.caption('Download an annual binary file from IMD, choose Upload files, then set its year and byte order in NetCDF / binary settings. This source is for Tmax.')
-        source = st.radio('Data source',['Demo · synthetic','Upload files','Download IMD rainfall'],key='source')
+        if product in TEMPERATURE_PAGES:
+            st.markdown(f'[IMD {meta["label"].lower()} · 1° binary source]({TEMPERATURE_PAGES[product]})')
+            st.caption('Choose Download from IMD for built-in annual retrieval, or upload files you already have.')
+        source = st.radio('Data source',['Demo · synthetic','Upload files','Download from IMD'],key='source')
         st.divider()
         st.subheader('Study region')
         region_mode = st.radio('Region method',['Bounding box','Upload polygon'],key='region_method',horizontal=True)
@@ -148,21 +157,23 @@ def main():
                 data = load_uploads(files,product,variable,units,binary_year,byte_order,tuple(bounds))
             st.caption(f'Uploaded data · {len(files)} file(s) · {meta["label"]}')
         else:
-            if product != 'rainfall':
-                st.info('Use Upload files for IMD Tmax/Tmin NetCDF or annual binary grids. The built-in downloader supports rainfall only.')
-                return
             with st.sidebar:
                 st.caption('Requests the selected years from IMD. Availability depends on IMD publication, not this app’s year selector.')
                 current = date.today().year
-                start = int(st.number_input('First download year',1901,current,current-2))
-                end = int(st.number_input('Last download year',1901,current,current-1))
-                download_key = (start,end)
+                minimum_year = 1901 if product == 'rainfall' else 1951
+                start = int(st.number_input('First download year',minimum_year,current,current-2))
+                end = int(st.number_input('Last download year',minimum_year,current,current-1))
+                byte_order = '<'
+                if product != 'rainfall':
+                    byte_order = '<' if st.selectbox('Download binary byte order',['Little endian','Big endian'],key='download_byte_order')=='Little endian' else '>'
+                download_key = (product,start,end,byte_order)
                 if st.button('Download selected years',type='primary',disabled=start>end):
                     paths,failures = [],[]
                     progress = st.progress(0.)
                     for i,year in enumerate(range(start,end+1)):
                         try:
-                            paths.append(str(download_rainfall(year)))
+                            path = download_rainfall(year) if product=='rainfall' else download_temperature(year,product,byte_order=byte_order)
+                            paths.append(str(path))
                         except Exception as exc:
                             failures.append(f'{year}: {exc}')
                         progress.progress((i+1)/(end-start+1))
@@ -179,8 +190,8 @@ def main():
             if not paths:
                 st.error('No valid datasets downloaded. Upload local NetCDF files to continue.')
                 return
-            data = load_downloads(tuple(paths),tuple(bounds))
-            source_id = repr((paths,product))
+            data = load_downloads(tuple(paths),tuple(bounds),product,byte_order)
+            source_id = repr((paths,product,byte_order))
 
         # Reset date widgets only when the source's available dates actually change.
         available = sorted(set(data.time.dt.year.values.tolist()))
@@ -247,8 +258,13 @@ def main():
         period = st.selectbox('Annual period',periods,key='map_period')
         if result['hydro']:
             st.caption(f'June {period} – May {int(period)+1}; only selected input dates are included.')
-        plot(spatial_chart(result,product,period,geometry),'spatial-chart')
-        st.caption('Each square marks an actual dataset grid center. Colors show annual rainfall totals or mean temperature; no interpolation is applied. Missing cells have no color. Partial data may vary between cells.')
+        left,middle,right=st.columns(3)
+        mode=left.selectbox('Map style',['IDW surface','Grid centers'],key='map_style')
+        power=middle.select_slider('IDW power',options=[1.,1.5,2.,3.,4.],value=2.,key='idw_power',disabled=mode!='IDW surface')
+        resolution=right.selectbox('Surface resolution',[80,120,200],index=1,key='idw_resolution',disabled=mode!='IDW surface')
+        show_points=st.checkbox('Overlay original grid centers',value=False,key='idw_points',disabled=mode!='IDW surface')
+        plot(spatial_chart(result,product,period,geometry,bounds=tuple(bounds),mode=mode,power=power,resolution=resolution,show_points=show_points),'spatial-chart')
+        st.caption('IDW estimates use up to 12 nearest valid grid centers and great-circle distances. The surface is clipped to the region, including polygon holes. Interpolation can extend beyond sample coverage inside the region and does not add observations. Statistics and exports use original grid values. Colors share one scale across selected years; partial data may vary between cells.')
     with trends:
         st.subheader('Annual trend evidence')
         table = trend_table(annual)

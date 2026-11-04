@@ -49,3 +49,30 @@ def test_official_tmax_binary_source_is_shown_for_temperature():
     app.sidebar.selectbox(key='product').select('Maximum temperature').run()
     assert not app.exception
     assert any('https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html' in item.value for item in app.sidebar.markdown)
+
+
+@pytest.mark.parametrize('product',['Maximum temperature','Minimum temperature'])
+def test_builtin_temperature_download_and_product_state(tmp_path,monkeypatch,product):
+    import numpy as np
+    calls=[]
+    def fetch(year,kind,folder='imd_netcdf_files',byte_order='<'):
+        calls.append((year,kind))
+        import calendar
+        count=366 if calendar.isleap(year) else 365
+        path=tmp_path/f'{kind.upper()}_{year}.grd'
+        path.write_bytes(np.full((count,31,31),25,dtype='<f4').tobytes())
+        return path
+    monkeypatch.setattr('imd_data.download_temperature',fetch)
+    app=AppTest.from_file(APP,default_timeout=30).run()
+    app.sidebar.selectbox(key='product').select(product).run()
+    app.sidebar.radio(key='source').set_value('Download from IMD').run()
+    assert not app.exception
+    next(b for b in app.sidebar.button if b.label=='Download selected years').click().run()
+    assert not app.exception
+    assert len(calls)==2
+    assert all(kind==('tmax' if product=='Maximum temperature' else 'tmin') for _,kind in calls)
+    assert app.session_state['analysis']['annual'].value.iloc[0]==pytest.approx(25)
+    # A batch for one product must never appear as another product's observations.
+    other='Minimum temperature' if product=='Maximum temperature' else 'Maximum temperature'
+    app.sidebar.selectbox(key='product').select(other).run()
+    assert 'analysis' not in app.session_state

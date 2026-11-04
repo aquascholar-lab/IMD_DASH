@@ -317,3 +317,50 @@ def demo_dataset(product: str) -> xr.DataArray:
         seasonal = 4*np.sin(2*np.pi*(day-20)/366)
         values = (29 if product == 'tmax' else 21)+seasonal+rng.normal(0,1.4,shape)
     return xr.DataArray(values,dims=('time','latitude','longitude'),coords={'time':dates,'latitude':lat,'longitude':lon},name=product,attrs={'units':'mm' if product=='rainfall' else 'degC'})
+
+
+# Re-export the temperature downloader alongside the existing rainfall helper.
+from imd_sources import download_temperature
+
+
+def idw_surface(longitudes, latitudes, values, bounds, geometry=None,
+                power=2., resolution=120, neighbors=12):
+    """Finite-only nearest-neighbor IDW using spherical great-circle distances.
+
+    Exact sample matches retain their values. The target is masked by the full
+    polygon (including holes); this surface never changes analysis statistics.
+    """
+    from scipy.spatial import cKDTree
+    if not 0 < power <= 8 or not 2 <= resolution <= 400 or neighbors < 1:
+        raise ValueError('Use IDW power (0, 8], resolution 2–400 and at least one neighbor.')
+    west,south,east,north = bounds
+    if not (-180<=west<east<=180 and -90<=south<north<=90):
+        raise ValueError('Invalid interpolation bounds.')
+    lon,lat,val = np.asarray(longitudes,float),np.asarray(latitudes,float),np.asarray(values,float)
+    if lon.ndim!=1 or lat.shape!=lon.shape or val.shape!=lon.shape:
+        raise ValueError('IDW coordinates and values must be equal-length 1D arrays.')
+    x,y = np.meshgrid(np.linspace(west,east,resolution),np.linspace(south,north,resolution))
+    z = np.full(x.shape,np.nan)
+    finite = np.isfinite(lon)&np.isfinite(lat)&np.isfinite(val)
+    if not finite.any(): return x,y,z
+    lon,lat,val=lon[finite],lat[finite],val[finite]
+    def unit_sphere(lons,lats):
+        lons,lats=np.deg2rad(lons),np.deg2rad(lats)
+        return np.column_stack((np.cos(lats)*np.cos(lons),np.cos(lats)*np.sin(lons),np.sin(lats)))
+    sample_xyz=unit_sphere(lon,lat)
+    target_xyz=unit_sphere(x.ravel(),y.ravel())
+    k=min(int(neighbors),len(val))
+    distances,indices=cKDTree(sample_xyz).query(target_xyz,k=k)
+    distances,indices=distances.reshape(-1,k),indices.reshape(-1,k)
+    distances=2*np.arcsin(np.clip(distances/2,0,1))
+    exact=distances[:,0]<1e-12
+    output=np.empty(x.size)
+    output[exact]=val[indices[exact,0]]
+    remaining=~exact
+    # Normalize by the closest distance before exponentiation to avoid overflow.
+    weights=(distances[remaining,:1]/distances[remaining])**power
+    output[remaining]=(weights*val[indices[remaining]]).sum(axis=1)/weights.sum(axis=1)
+    z=output.reshape(x.shape)
+    if geometry is not None:
+        z=np.where(intersects_xy(geometry,x,y),z,np.nan)
+    return x,y,z
