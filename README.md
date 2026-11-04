@@ -194,4 +194,20 @@ It covers built-in retrieval, uploads, rectangle selection, yearly grouping,
 coverage, charts, IDW, trends, exports, and troubleshooting. Dashboard controls
 remain mounted when reading the guide, preserving your current settings.
 
+## Data credits
+
+Gridded rainfall and temperature datasets are provided by the **India
+Meteorological Department (IMD), Ministry of Earth Sciences, Government of India**.
+Please acknowledge IMD when using these datasets or publishing derived results.
+Synthetic demo values are generated for this app and are not IMD observations.
+
+Official source pages:
+
+- [Rainfall · 0.25° NetCDF](https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html)
+- [Maximum temperature · 1° binary](https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html)
+- [Minimum temperature · 1° binary](https://www.imdpune.gov.in/cmpg/Griddata/Min_1_Bin.html)
+
+The shared footer displays IMD credits and these links on both app pages,
+including empty-data states and all dashboard result tabs.
+
 Webapp Prepared by Dr Sachchidanand Singh, Assistant Professor, IIT Mandi

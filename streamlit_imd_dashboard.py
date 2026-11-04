@@ -93,6 +93,8 @@ def main():
         label = st.selectbox('Climate variable',[v['label'] for v in PRODUCTS.values()],key='product')
         product = next(k for k,v in PRODUCTS.items() if v['label']==label)
         meta = PRODUCTS[product]
+        if product=='rainfall':
+            st.markdown('[IMD rainfall · 0.25° NetCDF source](https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html)')
         if product in TEMPERATURE_PAGES:
             st.markdown(f'[IMD {meta["label"].lower()} · 1° binary source]({TEMPERATURE_PAGES[product]})')
             st.caption('Choose Download from IMD for built-in annual retrieval, or upload files you already have.')
@@ -343,6 +345,8 @@ def run_app():
     with guide:
         st.markdown((Path(__file__).parent/'docs'/'HOW_TO_USE.md').read_text(encoding='utf-8'))
     st.divider()
+    st.markdown('**Data credit:** India Meteorological Department (IMD), Ministry of Earth Sciences, Government of India, for the gridded rainfall and temperature datasets.')
+    st.markdown('[Rainfall · 0.25° NetCDF](https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html) · [Maximum temperature · 1° binary](https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html) · [Minimum temperature · 1° binary](https://www.imdpune.gov.in/cmpg/Griddata/Min_1_Bin.html)')
     st.markdown('Webapp Prepared by Dr Sachchidanand Singh, Assistant Professor, IIT Mandi')
 
 

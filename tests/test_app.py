@@ -139,9 +139,14 @@ def test_usage_guide_and_attribution_available_in_empty_state():
     assert 'Download from IMD' in content
     assert 'IDW' in content
     assert 'NetCDF' in content
+    rainfall_url='https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html'
+    assert rainfall_url in content
+    assert any(rainfall_url in item.value for item in app.sidebar.markdown)
+    assert any('Data credit' in item.value and 'India Meteorological Department (IMD)' in item.value for item in app.markdown)
     attribution='Webapp Prepared by Dr Sachchidanand Singh, Assistant Professor, IIT Mandi'
-    assert app.markdown[-1].value==attribution
+    assert app.main.markdown[-1].value==attribution
     app.sidebar.radio(key='source').set_value('Upload files').run()
     assert not app.exception
-    assert app.markdown[-1].value==attribution
+    assert app.main.markdown[-1].value==attribution
+    assert any('Data credit' in item.value and 'India Meteorological Department (IMD)' in item.value for item in app.markdown)
     assert 'How to use this app' in [tab.label for tab in app.tabs]

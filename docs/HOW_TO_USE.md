@@ -212,7 +212,12 @@ and annual grouping alongside exported results.
 
 ## Data sources
 
-Observations are supplied by the India Meteorological Department (IMD).
-Temperature source pages:
+**Data credit:** India Meteorological Department (IMD), Ministry of Earth Sciences,
+Government of India, for the gridded rainfall and temperature datasets. Acknowledge
+IMD when using these datasets or publishing results derived from them. Synthetic
+demo values are generated for this app and are not IMD observations.
+
+Official source pages:
+[Rainfall · 0.25° NetCDF](https://www.imdpune.gov.in/cmpg/Griddata/Rainfall_25_NetCDF.html) ·
 [Maximum temperature](https://www.imdpune.gov.in/cmpg/Griddata/Max_1_Bin.html) ·
 [Minimum temperature](https://www.imdpune.gov.in/cmpg/Griddata/Min_1_Bin.html).
